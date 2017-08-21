@@ -7,9 +7,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/pbkdf2"
 	"math/big"
 	"strings"
+
+	"golang.org/x/crypto/pbkdf2"
 )
 
 // Some bitwise operands for working with big.Ints
@@ -20,6 +21,8 @@ var (
 	BigTwo                  = big.NewInt(2)
 )
 
+// NewEntropy will create random entropy bytes
+// so long as the requested size bitSize is an appropriate size.
 func NewEntropy(bitSize int) ([]byte, error) {
 	err := validateEntropyBitSize(bitSize)
 	if err != nil {
@@ -31,6 +34,9 @@ func NewEntropy(bitSize int) ([]byte, error) {
 	return entropy, err
 }
 
+// NewMnemonic will return a string consisting of the mnemonic words for
+// the given entropy.
+// If the provide entropy is invalid, an error will be returned.
 func NewMnemonic(entropy []byte) (string, error) {
 	// Compute some lengths for convenience
 	entropyBitLength := len(entropy) * 8
@@ -74,10 +80,13 @@ func NewMnemonic(entropy []byte) (string, error) {
 	return strings.Join(words, " "), nil
 }
 
+// MnemonicToByteArray takes a mnemonic string and turns it into a byte array
+// suitable for creating another mnemonic.
+// An error is returned if the mnemonic is invalid.
 func MnemonicToByteArray(mnemonic string) ([]byte, error) {
-	//	if IsMnemonicValid(mnemonic) == false {
-	//		return nil, fmt.Errorf("Invalid mnemonic")
-	//	}
+	if IsMnemonicValid(mnemonic) == false {
+		return nil, fmt.Errorf("Invalid mnemonic")
+	}
 	mnemonicSlice := strings.Split(mnemonic, " ")
 
 	bitSize := len(mnemonicSlice) * 11
@@ -143,6 +152,8 @@ func padHexToSize(hex []byte, size int) []byte {
 	return hex
 }
 
+// NewSeedWithErrorChecking creates a hashed seed output given the mnemonic string and a password.
+// An error is returned if the mnemonic is not convertible to a byte array.
 func NewSeedWithErrorChecking(mnemonic string, password string) ([]byte, error) {
 	_, err := MnemonicToByteArray(mnemonic)
 	if err != nil {
@@ -151,6 +162,8 @@ func NewSeedWithErrorChecking(mnemonic string, password string) ([]byte, error) 
 	return NewSeed(mnemonic, password), nil
 }
 
+// NewSeed creates a hashed seed output given a provided string and password.
+// No checking is performed to validate that the string provided is a valid mnemonic.
 func NewSeed(mnemonic string, password string) []byte {
 	return pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 64, sha512.New)
 }
@@ -203,6 +216,9 @@ func validateEntropyWithChecksumBitSize(bitSize int) error {
 	return nil
 }
 
+// IsMnemonicValid attempts to verify that the provided mnemonic is valid.
+// Validity is determined by both the number of words being appropriate,
+// and that all the words in the mnemonic are present in the word list.
 func IsMnemonicValid(mnemonic string) bool {
 	// Create a list of all the words in the mnemonic sentence
 	words := strings.Fields(mnemonic)

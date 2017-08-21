@@ -3,8 +3,9 @@ package bip39
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type Vector struct {
@@ -23,6 +24,9 @@ func TestBip39(t *testing.T) {
 		assert.Equal(t, vector.mnemonic, mnemonic)
 
 		// expectedSeed, err := hex.DecodeString(vector.seed)
+		_, err = NewSeedWithErrorChecking(mnemonic, "TREZOR")
+		assert.Nil(t, err)
+
 		seed := NewSeed(mnemonic, "TREZOR")
 		assert.Equal(t, vector.seed, hex.EncodeToString(seed))
 	}
@@ -42,7 +46,7 @@ func TestMnemonicToByteArray(t *testing.T) {
 
 }
 
-func TestMnemonicToByteArrayForDifferentArrayLangths(t *testing.T) {
+func TestMnemonicToByteArrayForDifferentArrayLengths(t *testing.T) {
 	max := 1000
 	for i := 0; i < max; i++ {
 		//16, 20, 24, 28, 32
@@ -157,6 +161,54 @@ func TestMnemonicToByteArrayForZeroLeadingSeeds(t *testing.T) {
 		_, err = MnemonicToByteArray(mnemonic)
 		if err != nil {
 			t.Errorf("Failed for %x - %v", seed, mnemonic)
+		}
+	}
+}
+
+func TestInvalidMnemonicFails(t *testing.T) {
+	for _, vector := range badMnemonicSentences() {
+		_, err := MnemonicToByteArray(vector.mnemonic)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestValidateEntropyWithChecksumBitSize(t *testing.T) {
+	// Good tests.
+	for i := 1; i <= (12*32 + 12); i++ {
+		err := validateEntropyWithChecksumBitSize(i)
+		switch i {
+		case 132: // 128 + 4
+			assert.Nil(t, err)
+		case 165: // 160 + 5
+			assert.Nil(t, err)
+		case 198: // 192 + 6
+			assert.Nil(t, err)
+		case 231: // 224 + 7
+			assert.Nil(t, err)
+		case 264: // 256 + 8
+			assert.Nil(t, err)
+		default:
+			assert.NotNil(t, err)
+		}
+	}
+	// Bad Tests
+	for i := 4; i <= 8; i++ {
+		err := validateEntropyWithChecksumBitSize((i * 32) + (i + 1))
+		assert.NotNil(t, err)
+	}
+}
+
+func TestNewEntropy(t *testing.T) {
+	// Good tests.
+	for i := 128; i <= 256; i += 32 {
+		_, err := NewEntropy(i)
+		assert.Nil(t, err)
+	}
+	// Bad Values
+	for i := 0; i <= 256; i++ {
+		if i%8 != 0 {
+			_, err := NewEntropy(i)
+			assert.NotNil(t, err)
 		}
 	}
 }
