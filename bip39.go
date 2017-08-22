@@ -41,7 +41,6 @@ func NewEntropy(bitSize int) ([]byte, error) {
 		}
 		entropy[0] = entropy[i]
 		entropy[i] = 0
-		fmt.Println("i: ", i)
 	}
 	return entropy, nil
 }
