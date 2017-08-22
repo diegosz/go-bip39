@@ -23,6 +23,7 @@ var (
 
 // NewEntropy will create random entropy bytes
 // so long as the requested size bitSize is an appropriate size.
+// Return non-zero first byte, unless all random zeros occurs.
 func NewEntropy(bitSize int) ([]byte, error) {
 	err := validateEntropyBitSize(bitSize)
 	if err != nil {
@@ -31,7 +32,18 @@ func NewEntropy(bitSize int) ([]byte, error) {
 
 	entropy := make([]byte, bitSize/8)
 	_, err = rand.Read(entropy)
-	return entropy, err
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(entropy); i++ {
+		if entropy[0] != 0 {
+			break
+		}
+		entropy[0] = entropy[i]
+		entropy[i] = 0
+		fmt.Println("i: ", i)
+	}
+	return entropy, nil
 }
 
 // NewMnemonic will return a string consisting of the mnemonic words for
